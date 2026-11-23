@@ -45,7 +45,28 @@ function pop(sel, text, cls) {
 function hitWard(w, n) { S[w].ward = Math.max(0, S[w].ward - n); pop(w === 'p' ? '#pward' : '#oward', '-' + n, 'dmg'); }
 function healWard(w, n) { S[w].ward = Math.min(MAX_WARD, S[w].ward + n); pop(w === 'p' ? '#pward' : '#oward', '+' + n, 'heal'); }
 function hitCreature(inst, n) { inst.hp -= n; pop(`[data-id="${inst.id}"]`, '-' + n, 'dmg'); }
-function reapDead() { for (const w of ['p', 'o']) S[w].board = S[w].board.filter(i => i.hp > 0); }
+function explodeAt(el) {
+  const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const ghost = el.cloneNode(true);
+  ghost.classList.add('die-clone');
+  ghost.style.left = r.left + 'px'; ghost.style.top = r.top + 'px'; ghost.style.width = r.width + 'px'; ghost.style.height = r.height + 'px';
+  document.body.append(ghost); setTimeout(() => ghost.remove(), 460);
+  const ring = document.createElement('div'); ring.className = 'ring';
+  ring.style.left = (cx - r.width / 2) + 'px'; ring.style.top = (cy - r.width / 2) + 'px'; ring.style.width = r.width + 'px'; ring.style.height = r.width + 'px';
+  document.body.append(ring); setTimeout(() => ring.remove(), 480);
+  const cols = ['#ffd56e', '#ff8a5a', '#c99aff', '#fff3d6'];
+  for (let i = 0; i < 14; i++) {
+    const p = document.createElement('div'); p.className = 'px';
+    const a = Math.random() * Math.PI * 2, d = 34 + Math.random() * 62;
+    p.style.setProperty('--dx', Math.cos(a) * d + 'px'); p.style.setProperty('--dy', Math.sin(a) * d + 'px');
+    p.style.left = (cx - 4) + 'px'; p.style.top = (cy - 4) + 'px'; p.style.background = cols[i % cols.length];
+    document.body.append(p); setTimeout(() => p.remove(), 580);
+  }
+}
+function reapDead() {
+  for (const w of ['p', 'o']) for (const i of S[w].board) if (i.hp <= 0) { const el = document.querySelector(`[data-id="${i.id}"]`); if (el) explodeAt(el); }
+  for (const w of ['p', 'o']) S[w].board = S[w].board.filter(i => i.hp > 0);
+}
 function validTargets(w) {                    // enemy side w: guards shield everything else
   const guards = S[w].board.filter(i => i.c.guard);
   return guards.length ? guards : [...S[w].board, 'ward'];
