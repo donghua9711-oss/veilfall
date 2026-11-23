@@ -1,0 +1,192 @@
+// Veilfall: 1v1 duel vs AI. Reduce the enemy Ward from 20 to 0.
+const $ = s => document.querySelector(s), sleep = ms => new Promise(r => setTimeout(r, ms));
+const MAX_WARD = 20, MAX_BOARD = 5, MAX_HAND = 7, MAX_MANA = 10;
+let S, uid = 0;
+const other = w => w === 'p' ? 'o' : 'p';
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const newSide = () => ({ward: MAX_WARD, mana: 0, max: 0, deck: shuffle([...CARDS, ...CARDS]), hand: [], board: []});
+const makeCreature = c => ({c, id: ++uid, atk: c.atk, hp: c.hp, max: c.hp, ready: !!c.charge});
+
+function newGame() {
+  S = {p: newSide(), o: newSide(), turn: 'p', busy: false, sel: null, over: false};
+  for (let i = 0; i < 4; i++) { drawCard('p'); drawCard('o'); }
+  $('#end-screen').classList.add('hidden');
+  startTurn('p');
+}
+function drawCard(w) {
+  const s = S[w], c = s.deck.pop();
+  if (!c) return hitWard(w, 1);              // fatigue
+  if (s.hand.length < MAX_HAND) s.hand.push(c);
+}
+function startTurn(w) {
+  const s = S[w]; S.turn = w; s.max = Math.min(MAX_MANA, s.max + 1); s.mana = s.max;
+  drawCard(w); s.board.forEach(i => i.ready = true); S.sel = null;
+  setHint(w === 'p' ? 'Play cards, attack, then End Turn.' : 'The Rift Warden is plotting...');
+  checkEnd(); render();
+  if (w === 'o' && !S.over) aiTurn();
+}
+function setHint(t) { $('#hint').textContent = t; }
+function pop(sel, text, cls) {
+  const el = $(sel); if (!el) return;
+  const r = el.getBoundingClientRect(), s = document.createElement('span');
+  s.textContent = text; s.className = cls; s.style.left = r.left + r.width / 2 - 14 + 'px'; s.style.top = r.top + r.height / 3 + 'px';
+  $('#fx').append(s); setTimeout(() => s.remove(), 950);
+}
+function hitWard(w, n) { S[w].ward = Math.max(0, S[w].ward - n); pop(w === 'p' ? '#pward' : '#oward', '-' + n, 'dmg'); }
+function healWard(w, n) { S[w].ward = Math.min(MAX_WARD, S[w].ward + n); pop(w === 'p' ? '#pward' : '#oward', '+' + n, 'heal'); }
+function hitCreature(inst, n) { inst.hp -= n; pop(`[data-id="${inst.id}"]`, '-' + n, 'dmg'); }
+function reapDead() { for (const w of ['p', 'o']) S[w].board = S[w].board.filter(i => i.hp > 0); }
+function validTargets(w) {                    // enemy side w: guards shield everything else
+  const guards = S[w].board.filter(i => i.c.guard);
+  return guards.length ? guards : [...S[w].board, 'ward'];
+}
+function battlecry(w, [kind, n]) {
+  if (kind === 'heal') healWard(w, n);
+  if (kind === 'hit') hitWard(other(w), n);
+  if (kind === 'draw') for (let i = 0; i < n; i++) drawCard(w);
+}
+function playCreature(w, idx) {
+  const s = S[w], c = s.hand[idx]; s.mana -= c.cost; s.hand.splice(idx, 1);
+  s.board.push(makeCreature(c)); if (c.bc) battlecry(w, c.bc);
+  checkEnd(); render();
+}
+function castSpell(w, idx, target) {
+  const s = S[w], c = s.hand[idx], e = other(w), [kind, n] = c.spell;
+  s.mana -= c.cost; s.hand.splice(idx, 1);
+  if (kind === 'bolt') target === 'ward' ? hitWard(e, n) : hitCreature(target, n);
+  if (kind === 'heal') healWard(w, n);
+  if (kind === 'nova') [...S[e].board].forEach(i => hitCreature(i, n));
+  S.sel = null; reapDead(); checkEnd(); setHint('Play cards, attack, then End Turn.'); render();
+}
+async function attack(w, att, target) {
+  const was = S.busy; S.busy = true; S.sel = null;
+  const el = $(`[data-id="${att.id}"]`); if (el) el.classList.add(w === 'p' ? 'lungeU' : 'lungeD');
+  await sleep(220);
+  att.ready = false;
+  if (target === 'ward') hitWard(other(w), att.atk);
+  else { hitCreature(target, att.atk); hitCreature(att, target.atk); }
+  S.busy = was; reapDead(); checkEnd(); render();
+}
+function checkEnd() {
+  if (S.over) return;
+  if (S.o.ward <= 0) endGame(true); else if (S.p.ward <= 0) endGame(false);
+}
+function endGame(win) {
+  S.over = true;
+  setTimeout(() => {
+    $('.panel').className = 'panel ' + (win ? 'win' : 'lose');
+    $('#endTitle').textContent = win ? 'VICTORY' : 'DEFEAT';
+    $('#endText').textContent = win ? 'The Rift Warden\'s Ward has shattered. The veil is yours.' : 'Your Ward has fallen. The Rift Warden claims the veil.';
+    $('#end-screen').classList.remove('hidden');
+  }, 600);
+}
+function endTurn() { if (S.turn !== 'p' || S.busy || S.over) return; startTurn('o'); }
+
+// ---------- AI ----------
+function aiPickPlay() {
+  const o = S.o, p = S.p; let best = null;
+  o.hand.forEach((c, i) => {
+    if (c.cost > o.mana) return;
+    let v = -1, run;
+    if (!c.spell) { if (o.board.length < MAX_BOARD) { v = c.cost + 1; run = () => playCreature('o', i); } }
+    else {
+      const [k, n] = c.spell;
+      if (k === 'heal' && o.ward <= 14) { v = c.cost + (o.ward <= 10 ? 4 : 0); run = () => castSpell('o', i); }
+      if (k === 'nova') { const kills = p.board.filter(x => x.hp <= n).length; if (kills >= 2 || p.board.length >= 3) { v = c.cost + kills * 2; run = () => castSpell('o', i); } }
+      if (k === 'bolt') {
+        if (p.ward <= n) { v = 99; run = () => castSpell('o', i, 'ward'); }
+        else { const t = p.board.filter(x => x.hp <= n).sort((a, b) => b.c.cost - a.c.cost)[0]; if (t && t.c.cost >= c.cost - 1) { v = c.cost + t.c.cost; run = () => castSpell('o', i, t); } }
+      }
+    }
+    if (run && (!best || v > best.v)) best = {v, run};
+  });
+  return best && best.run;
+}
+function aiPickTarget(a) {
+  const ts = validTargets('p'), ward = ts.includes('ward'), cs = ts.filter(t => t !== 'ward');
+  if (ward && a.atk >= S.p.ward) return 'ward';
+  const free = cs.filter(t => a.atk >= t.hp && a.hp > t.atk).sort((x, y) => y.c.cost - x.c.cost)[0]; if (free) return free;
+  const trade = cs.find(t => a.atk >= t.hp && t.c.cost >= a.c.cost); if (trade) return trade;
+  if (ward) return 'ward';
+  const t = cs.sort((x, y) => x.hp - y.hp)[0];
+  return t && (a.atk >= t.hp || a.hp > t.atk) ? t : null;
+}
+async function aiTurn() {
+  S.busy = true; render(); await sleep(800);
+  for (let n = 0; n < 8 && !S.over; n++) { const act = aiPickPlay(); if (!act) break; act(); await sleep(750); }
+  for (const a of [...S.o.board]) {
+    if (S.over) break; if (!a.ready || a.hp <= 0) continue;
+    const t = aiPickTarget(a); if (!t) continue;
+    await attack('o', a, t); await sleep(550);
+  }
+  S.busy = false; if (!S.over) startTurn('p'); else render();
+}
+
+// ---------- Rendering ----------
+function cardHtml(c, o = {}) {
+  const inst = o.inst;
+  const stats = c.spell
+    ? `<span class="b ${c.spell[0] === 'heal' ? 'hp' : 'atk'}"><i>${c.spell[1]}</i><small>${c.spell[0] === 'heal' ? 'HEAL' : 'DMG'}</small></span><span class="kind">SPELL</span>`
+    : `<span class="b atk"><i>${inst ? inst.atk : c.atk}</i><small>ATK</small></span><span class="b hp${inst && inst.hp < inst.max ? ' hurt' : ''}"><i>${inst ? inst.hp : c.hp}</i><small>HP</small></span>`;
+  const P = PAL[c.el];
+  return `<div class="card ${o.cls || ''}" style="--f:${P.f};--b:${P.b};${o.style || ''}" ${o.attrs || ''}><div class="hd"><i class="gem">${c.cost}</i><span class="nm">${c.name}</span></div><div class="art">${artOf(c)}</div><div class="tx">${c.text}</div><div class="st">${stats}</div></div>`;
+}
+function wardHtml(s) { return `<b>${s.ward}</b><small>WARD</small><div class="bar"><i style="width:${s.ward / MAX_WARD * 100}%"></i></div>`; }
+function targetSet() {
+  if (!S.sel || S.over) return [];
+  return S.sel.att ? validTargets('o') : [...S.o.board, 'ward'];
+}
+function boardHtml(w, tg) {
+  return S[w].board.map(i => {
+    let cls = (i.c.guard ? 'gd ' : '') + (w === 'p' && S.turn === 'p' && i.ready && !S.busy ? 'rdy ' : '');
+    if (S.sel && S.sel.att === i) cls += 'sel ';
+    if (w === 'o' && tg.includes(i)) cls += 'tgt ';
+    return cardHtml(i.c, {inst: i, cls, attrs: `data-id="${i.id}" data-side="${w}"`});
+  }).join('');
+}
+function render() {
+  const {p, o} = S, tg = targetSet();
+  $('#oward').innerHTML = wardHtml(o); $('#pward').innerHTML = wardHtml(p);
+  $('#oward').classList.toggle('tgt', tg.includes('ward'));
+  $('#ometa').textContent = `Mana ${o.mana}/${o.max}, deck ${o.deck.length}, hand ${o.hand.length}`;
+  $('#pmeta').textContent = `Mana ${p.mana}/${p.max}, deck ${p.deck.length}`;
+  $('#pmana').innerHTML = Array.from({length: MAX_MANA}, (_, k) => `<i class="${k < p.mana ? 'on' : k < p.max ? 'used' : ''}"></i>`).join('');
+  $('#turn').textContent = S.over ? 'Duel over' : S.turn === 'p' ? 'Your turn' : 'Enemy turn';
+  $('#ohand').innerHTML = o.hand.map(() => '<div class="back"></div>').join('');
+  $('#oboard').innerHTML = boardHtml('o', tg); $('#pboard').innerHTML = boardHtml('p', tg);
+  $('#phand').innerHTML = p.hand.map((c, i) => cardHtml(c, {cls: S.turn === 'p' && !S.busy && c.cost <= p.mana ? 'ok' : '', attrs: `data-hand="${i}"`})).join('');
+  $('#end').disabled = S.turn !== 'p' || S.busy || S.over;
+}
+
+// ---------- Input ----------
+async function onBoardClick(e) {
+  if (S.turn !== 'p' || S.busy || S.over) return;
+  const t = e.target.closest('[data-hand],[data-id],#oward');
+  if (!t) { S.sel = null; return render(); }
+  const p = S.p;
+  if (t.dataset.hand !== undefined) {
+    const idx = +t.dataset.hand, c = p.hand[idx];
+    if (c.cost > p.mana) return setHint('Not enough mana.');
+    if (c.spell) { if (c.spell[0] === 'bolt') { S.sel = {spell: idx}; setHint('Choose an enemy target.'); return render(); } return castSpell('p', idx); }
+    if (p.board.length >= MAX_BOARD) return setHint('Your board is full.');
+    return playCreature('p', idx);
+  }
+  const target = t.id === 'oward' ? 'ward' : (t.dataset.side === 'o' ? S.o.board.find(i => i.id == t.dataset.id) : null);
+  if (!target) {                              // own creature: select as attacker
+    const inst = p.board.find(i => i.id == t.dataset.id);
+    if (!inst.ready) return setHint('That creature just arrived and cannot attack yet.');
+    S.sel = S.sel && S.sel.att === inst ? null : {att: inst}; return render();
+  }
+  if (!S.sel) return;
+  if (S.sel.spell !== undefined) return castSpell('p', S.sel.spell, target);
+  if (!validTargets('o').includes(target)) return setHint('A Guard creature must be attacked first.');
+  await attack('p', S.sel.att, target);
+}
+function showTitle() {
+  $('#fan').innerHTML = ['paladin', 'drake', 'nova'].map((id, k) => cardHtml(CARDS.find(x => x.id === id), {style: `transform:rotate(${(k - 1) * 9}deg) translateY(${k === 1 ? -10 : 0}px)`})).join('');
+}
+$('#game').addEventListener('click', onBoardClick);
+$('#end').onclick = endTurn;
+$('#restart').onclick = $('#again').onclick = newGame;
+$('#start').onclick = () => { $('#title').classList.add('hidden'); $('#game').classList.remove('hidden'); newGame(); };
+showTitle();
