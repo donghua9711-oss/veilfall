@@ -32,7 +32,7 @@ function startTurn(w) {
   if (w === 'p') { S.played = false; S.deadline = Date.now() + TURN_SECONDS * 1000; }
   if (w === 'p') setTimeout(maybeAutoPass, 1400);
   drawCard(w); s.board.forEach(i => i.ready = true); S.sel = null;
-  setHint(w === 'p' ? 'Play cards, attack, then End Turn.' : 'The Rift Warden is plotting...');
+  setHint(w === 'p' ? 'Summon your creatures - they attack on their own when your turn ends.' : 'The Rift Warden is plotting...');
   checkEnd(); render();
   if (w === 'o' && !S.over) aiTurn();
 }
@@ -105,7 +105,7 @@ function castSpell(w, idx, target) {
   if (kind === 'bolt') { zapAt(target === 'ward' ? $(w === 'p' ? '#oward' : '#pward') : $(`[data-id="${target.id}"]`)); target === 'ward' ? hitWard(e, n) : hitCreature(target, n); }
   if (kind === 'heal') healWard(w, n);
   if (kind === 'nova') [...S[e].board].forEach(i => hitCreature(i, n));
-  S.sel = null; reapDead(); checkEnd(); setHint('Play cards and attack - a turn passes by itself when nothing is left to do.'); render();
+  S.sel = null; reapDead(); checkEnd(); setHint('Summoned. Your creatures attack on their own when your turn ends.'); render();
 }
 async function attack(w, att, target) {
   const was = S.busy; S.busy = true; S.sel = null;
@@ -129,7 +129,18 @@ function endGame(win) {
     $('#end-screen').classList.remove('hidden');
   }, 600);
 }
-function endTurn() { if (S.turn !== 'p' || S.busy || S.over) return; startTurn('o'); }
+async function playerAttackPhase() {         // creatures attack on their own, one by one
+  for (const a of [...S.p.board]) {
+    if (S.over) break;
+    if (!a.ready || a.hp <= 0 || !S.p.board.includes(a)) continue;
+    await attack('p', a, playerAutoTarget(a)); await sleep(170);
+  }
+}
+function endTurn() {
+  if (S.turn !== 'p' || S.busy || S.over) return;
+  S.busy = true; S.sel = null; render();
+  playerAttackPhase().then(() => { S.busy = false; if (!S.over) startTurn('o'); });
+}
 
 // ---------- AI ----------
 function aiPickPlay() {
@@ -236,7 +247,7 @@ function tickTimer() {
   if (!S.played) { hitWard('p', TIMEOUT_BURN); setHint('Time! You summoned nothing - the Rift burns your Ward for ' + TIMEOUT_BURN + '.'); }
   else setHint('Time! Your turn passes.');
   render();
-  setTimeout(() => { S.busy = false; if (!S.over) startTurn('o'); }, 1300);
+  setTimeout(() => { S.busy = false; if (!S.over) endTurn(); }, 1300);
 }
 setInterval(tickTimer, 250);
 
@@ -278,13 +289,7 @@ async function onBoardClick(e) {
     if (p.board.length >= MAX_BOARD) return setHint('Your board is full.');
     const r = playCreature('p', idx); maybeAutoPass(); return r;
   }
-  if (t.dataset.side === 'p') {                // one click attacks: Guard, a killable creature, or the Ward
-    const inst = p.board.find(i => i.id == t.dataset.id);
-    if (!inst) return;
-    if (!inst.ready) return setHint('That creature just arrived and cannot attack yet.');
-    const r = await attack('p', inst, playerAutoTarget(inst)); maybeAutoPass(); return r;
-  }
-  return setHint('Tap your cards to play them; tap your creatures to attack.');
+  return setHint('You only summon - your creatures attack on their own when your turn ends.');
 }
 function showTitle() {
   $('#fan').innerHTML = ['paladin', 'drake', 'nova'].map((id, k) => cardHtml(CARDS.find(x => x.id === id), {style: `transform:rotate(${(k - 1) * 9}deg) translateY(${k === 1 ? -10 : 0}px)`})).join('');
