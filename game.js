@@ -324,8 +324,10 @@ function buildGallery() {
     return `<div class="g-item">${cardHtml(c, {})}<div class="g-info"><b>${c.name}</b><div class="g-stats">${stats}</div><p>${DESC[c.id] || c.text}</p></div></div>`;
   }).join('');
 }
-$('#galleryBtn').onclick = () => { buildGallery(); $('#gallery').hidden = false; };
-$('#galleryClose').onclick = () => { $('#gallery').hidden = true; };
-$('#rulesBtn').onclick = () => { $('#rules').hidden = false; };
-$('#rulesClose').onclick = () => { $('#rules').hidden = true; };
-$('#lobby').onclick = () => location.reload();
+document.addEventListener('DOMContentLoaded', () => {
+  $('#galleryBtn').onclick = () => { buildGallery(); $('#gallery').hidden = false; };
+  $('#galleryClose').onclick = () => { $('#gallery').hidden = true; };
+  $('#rulesBtn').onclick = () => { $('#rules').hidden = false; };
+  $('#rulesClose').onclick = () => { $('#rules').hidden = true; };
+  $('#lobby').onclick = () => location.reload();
+});

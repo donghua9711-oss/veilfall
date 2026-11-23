@@ -8,7 +8,10 @@
 <aside><div class="side"><div class="who">Rift Warden (AI)</div><div id="oward" class="ward" data-target="ward"></div><div class="meta" id="ometa"></div><div class="mana" id="opips"></div></div>
 <div class="center"><div id="turn"></div><div id="timer"><i></i><span></span></div><div id="hint"></div><button id="end" class="primary">End Turn</button><button id="restart" class="ghost">Restart</button><button id="lobby" class="ghost">Lobby</button></div>
 <div class="side"><div class="who">You, Veil Warden</div><div id="pward" class="ward"></div><div class="meta" id="pmeta"></div><div class="mana" id="pmana"></div></div></aside>
-<main><div id="ohand" class="row"></div><div id="oboard" class="row board"></div><div id="pboard" class="row board"></div><div id="phand" class="row"></div></main><section id="gallery" hidden><div class="g-panel"><div class="g-head"><h2>Card Gallery</h2><button id="galleryClose" class="ghost">Close</button></div><p class="g-sub">Every card in the game, and exactly what it does.</p><div id="galleryGrid"></div></div></section>
+<main><div id="ohand" class="row"></div><div id="oboard" class="row board"></div><div id="pboard" class="row board"></div><div id="phand" class="row"></div></main></section>
+<div id="end-screen" class="hidden"><div class="panel"><h2 id="endTitle"></h2><p id="endText"></p><button id="again" class="primary">Play again</button></div></div>
+<div id="fx"></div>
+<script src="cards.js"></script><script src="art.js"></script><script src="game.js"></script><section id="gallery" hidden><div class="g-panel"><div class="g-head"><h2>Card Gallery</h2><button id="galleryClose" class="ghost">Close</button></div><p class="g-sub">Every card in the game, and exactly what it does.</p><div id="galleryGrid"></div></div></section>
 <section id="rules" hidden><div class="g-panel"><div class="g-head"><h2>How to Play</h2><button id="rulesClose" class="ghost">Close</button></div><ul class="r-list">
 <li><b>Goal.</b> Bring the enemy Ward from 20 to 0 before your own Ward falls.</li>
 <li><b>Mana.</b> Every turn you gain +1 max mana (up to 10) and it refills in full, and you draw 1 card. The Warden gains mana exactly the same way - every card costs mana, for both sides.</li>
@@ -17,7 +20,4 @@
 <li><b>Guard.</b> While a Guard stands on a field, enemies must attack it before anything else.</li>
 <li><b>The clock.</b> You have 15 seconds to summon each turn. If time runs out and you summoned nothing, the Rift burns your Ward for 2. When you have nothing left to do, your turn passes by itself - no need to press End Turn.</li>
 <li><b>Empty deck.</b> When your deck runs out, every card you would draw burns your Ward for 1 instead.</li>
-</ul></div></section></section>
-<div id="end-screen" class="hidden"><div class="panel"><h2 id="endTitle"></h2><p id="endText"></p><button id="again" class="primary">Play again</button></div></div>
-<div id="fx"></div>
-<script src="cards.js"></script><script src="art.js"></script><script src="game.js"></script></body></html>
+</ul></div></section></body></html>
