@@ -10,8 +10,16 @@ const makeCreature = c => ({c, id: ++uid, atk: c.atk, hp: c.hp, max: c.hp, ready
 function newGame() {
   S = {p: newSide(), o: newSide(), turn: 'p', busy: false, sel: null, over: false};
   for (let i = 0; i < 4; i++) { drawCard('p'); drawCard('o'); }
+  ensureOpener('p'); ensureOpener('o');
   $('#end-screen').classList.add('hidden');
   startTurn('p');
+}
+function ensureOpener(w) {           // guarantee a card playable on turn 1 (cost 1), preferring a creature
+  const s = S[w]; if (s.hand.some(c => c.cost <= 1)) return;
+  let di = s.deck.findIndex(c => c.cost <= 1 && !c.spell);
+  if (di < 0) di = s.deck.findIndex(c => c.cost <= 1);
+  if (di < 0) return;
+  const t = s.hand[0]; s.hand[0] = s.deck[di]; s.deck[di] = t;
 }
 function drawCard(w) {
   const s = S[w], c = s.deck.pop();
