@@ -222,29 +222,42 @@ function tickTimer() {
 }
 setInterval(tickTimer, 250);
 
+function playerAutoTarget(att) {
+  const ts = validTargets('o'), cs = ts.filter(t => t !== 'ward'), ward = ts.includes('ward');
+  const guard = cs.find(t => t.c.guard); if (guard) return guard;
+  if (ward && att.atk >= S.o.ward) return 'ward';
+  const free = cs.filter(t => att.atk >= t.hp && att.hp > t.atk).sort((a, b) => b.c.cost - a.c.cost)[0]; if (free) return free;
+  const trade = cs.find(t => att.atk >= t.hp && t.c.cost >= att.c.cost); if (trade) return trade;
+  if (ward) return 'ward';
+  return cs.sort((a, b) => a.hp - b.hp)[0] || 'ward';
+}
+function playerBoltTarget(n) {
+  const ts = validTargets('o'), cs = ts.filter(t => t !== 'ward');
+  const kill = cs.filter(t => t.hp <= n).sort((a, b) => b.c.cost - a.c.cost)[0]; if (kill) return kill;
+  if (ts.includes('ward') && S.o.ward <= n) return 'ward';
+  const guard = cs.find(t => t.c.guard); if (guard) return guard;
+  return cs.sort((a, b) => b.c.cost - a.c.cost)[0] || 'ward';
+}
 // ---------- Input ----------
 async function onBoardClick(e) {
   if (S.turn !== 'p' || S.busy || S.over) return;
   const t = e.target.closest('[data-hand],[data-id],#oward');
   if (!t) { S.sel = null; return render(); }
   const p = S.p;
-  if (t.dataset.hand !== undefined) {
+  if (t.dataset.hand !== undefined) {          // one click plays the card
     const idx = +t.dataset.hand, c = p.hand[idx];
     if (c.cost > p.mana) return setHint('Not enough mana.');
-    if (c.spell) { if (c.spell[0] === 'bolt') { S.sel = {spell: idx}; setHint('Choose an enemy target.'); return render(); } return castSpell('p', idx); }
+    if (c.spell) { if (c.spell[0] === 'bolt') return castSpell('p', idx, playerBoltTarget(c.spell[1])); return castSpell('p', idx); }
     if (p.board.length >= MAX_BOARD) return setHint('Your board is full.');
     return playCreature('p', idx);
   }
-  const target = t.id === 'oward' ? 'ward' : (t.dataset.side === 'o' ? S.o.board.find(i => i.id == t.dataset.id) : null);
-  if (!target) {                              // own creature: select as attacker
+  if (t.dataset.side === 'p') {                // one click attacks: Guard, a killable creature, or the Ward
     const inst = p.board.find(i => i.id == t.dataset.id);
+    if (!inst) return;
     if (!inst.ready) return setHint('That creature just arrived and cannot attack yet.');
-    S.sel = S.sel && S.sel.att === inst ? null : {att: inst}; return render();
+    return await attack('p', inst, playerAutoTarget(inst));
   }
-  if (!S.sel) return;
-  if (S.sel.spell !== undefined) return castSpell('p', S.sel.spell, target);
-  if (!validTargets('o').includes(target)) return setHint('A Guard creature must be attacked first.');
-  await attack('p', S.sel.att, target);
+  return setHint('Tap your cards to play them; tap your creatures to attack.');
 }
 function showTitle() {
   $('#fan').innerHTML = ['paladin', 'drake', 'nova'].map((id, k) => cardHtml(CARDS.find(x => x.id === id), {style: `transform:rotate(${(k - 1) * 9}deg) translateY(${k === 1 ? -10 : 0}px)`})).join('');
