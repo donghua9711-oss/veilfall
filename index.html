@@ -2,13 +2,22 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Veilfall: Wardens of the Rift</title><link rel="stylesheet" href="style.css"></head><body>
 <section id="title"><h1>VEILFALL</h1><p class="sub">Wardens of the Rift</p><div class="fan" id="fan"></div>
-<button id="start" class="primary">Start duel</button>
-<p class="how">One click plays a card. Click one of your creatures and it attacks at once - a Guard first, a creature it can destroy, or the enemy Ward. Bring the enemy Ward from 20 to 0 before yours falls.</p></section>
+<button id="start" class="primary">Start duel</button><button id="galleryBtn" class="ghost">Card Gallery</button><button id="rulesBtn" class="ghost">Rules</button>
+<p class="how">Mana: both Wardens gain +1 max mana every turn, refilled in full, up to 10 - every card costs mana, for the Warden too. One click plays a card. Click one of your creatures and it attacks at once - a Guard first, a creature it can destroy, or the enemy Ward. Bring the enemy Ward from 20 to 0 before yours falls.</p></section>
 <section id="game" class="hidden">
-<aside><div class="side"><div class="who">Rift Warden (AI)</div><div id="oward" class="ward" data-target="ward"></div><div class="meta" id="ometa"></div></div>
-<div class="center"><div id="turn"></div><div id="timer"><i></i><span></span></div><div id="hint"></div><button id="end" class="primary">End Turn</button><button id="restart" class="ghost">Restart</button></div>
+<aside><div class="side"><div class="who">Rift Warden (AI)</div><div id="oward" class="ward" data-target="ward"></div><div class="meta" id="ometa"></div><div class="mana" id="opips"></div></div>
+<div class="center"><div id="turn"></div><div id="timer"><i></i><span></span></div><div id="hint"></div><button id="end" class="primary">End Turn</button><button id="restart" class="ghost">Restart</button><button id="lobby" class="ghost">Lobby</button></div>
 <div class="side"><div class="who">You, Veil Warden</div><div id="pward" class="ward"></div><div class="meta" id="pmeta"></div><div class="mana" id="pmana"></div></div></aside>
-<main><div id="ohand" class="row"></div><div id="oboard" class="row board"></div><div id="pboard" class="row board"></div><div id="phand" class="row"></div></main></section>
+<main><div id="ohand" class="row"></div><div id="oboard" class="row board"></div><div id="pboard" class="row board"></div><div id="phand" class="row"></div></main><section id="gallery" hidden><div class="g-panel"><div class="g-head"><h2>Card Gallery</h2><button id="galleryClose" class="ghost">Close</button></div><p class="g-sub">Every card in the game, and exactly what it does.</p><div id="galleryGrid"></div></div></section>
+<section id="rules" hidden><div class="g-panel"><div class="g-head"><h2>How to Play</h2><button id="rulesClose" class="ghost">Close</button></div><ul class="r-list">
+<li><b>Goal.</b> Bring the enemy Ward from 20 to 0 before your own Ward falls.</li>
+<li><b>Mana.</b> Every turn you gain +1 max mana (up to 10) and it refills in full, and you draw 1 card. The Warden gains mana exactly the same way - every card costs mana, for both sides.</li>
+<li><b>Playing cards.</b> Click a card in your hand to play it. Creatures take the field (max 5); spells fire at once.</li>
+<li><b>Attacking.</b> Click one of your creatures and it attacks at once: a Guard first, then a creature it can destroy, otherwise the enemy Ward. A creature that just arrived waits one turn before attacking - unless it is Swift.</li>
+<li><b>Guard.</b> While a Guard stands on a field, enemies must attack it before anything else.</li>
+<li><b>The clock.</b> You have 15 seconds to summon each turn. If time runs out and you summoned nothing, the Rift burns your Ward for 2. When you have nothing left to do, your turn passes by itself - no need to press End Turn.</li>
+<li><b>Empty deck.</b> When your deck runs out, every card you would draw burns your Ward for 1 instead.</li>
+</ul></div></section></section>
 <div id="end-screen" class="hidden"><div class="panel"><h2 id="endTitle"></h2><p id="endText"></p><button id="again" class="primary">Play again</button></div></div>
 <div id="fx"></div>
 <script src="cards.js"></script><script src="art.js"></script><script src="game.js"></script></body></html>

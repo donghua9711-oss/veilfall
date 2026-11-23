@@ -30,6 +30,7 @@ function drawCard(w) {
 function startTurn(w) {
   const s = S[w]; S.turn = w; s.max = Math.min(MAX_MANA, s.max + 1); s.mana = s.max;
   if (w === 'p') { S.played = false; S.deadline = Date.now() + TURN_SECONDS * 1000; }
+  if (w === 'p') setTimeout(maybeAutoPass, 1400);
   drawCard(w); s.board.forEach(i => i.ready = true); S.sel = null;
   setHint(w === 'p' ? 'Play cards, attack, then End Turn.' : 'The Rift Warden is plotting...');
   checkEnd(); render();
@@ -63,6 +64,22 @@ function explodeAt(el) {
     document.body.append(p); setTimeout(() => p.remove(), 580);
   }
 }
+function zapAt(el) {                 // a lightning bolt strikes the target card or Ward
+  if (!el) return;
+  const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  let pts = [], x = cx + (Math.random() * 60 - 30), y = Math.max(0, r.top - 190);
+  pts.push(x + ',' + y);
+  const steps = 5;
+  for (let i = 1; i <= steps; i++) pts.push((cx + (x - cx) * (1 - i / steps) + (Math.random() * 26 - 13)) + ',' + (y + (cy - y) * i / steps));
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'zap');
+  svg.innerHTML = `<polyline points="${pts.join(' ')}" fill="none" stroke="#ffe95a" stroke-width="3.5" stroke-linejoin="round"/><polyline points="${pts.join(' ')}" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round"/>`;
+  document.body.append(svg); setTimeout(() => svg.remove(), 300);
+  const f = document.createElement('div'); f.className = 'flash';
+  f.style.left = r.left + 'px'; f.style.top = r.top + 'px'; f.style.width = r.width + 'px'; f.style.height = r.height + 'px';
+  document.body.append(f); setTimeout(() => f.remove(), 300);
+  el.classList.add('shake'); setTimeout(() => el.classList.remove('shake'), 320);
+}
 function reapDead() {
   for (const w of ['p', 'o']) for (const i of S[w].board) if (i.hp <= 0) { const el = document.querySelector(`[data-id="${i.id}"]`); if (el) explodeAt(el); }
   for (const w of ['p', 'o']) S[w].board = S[w].board.filter(i => i.hp > 0);
@@ -85,10 +102,10 @@ function castSpell(w, idx, target) {
   const s = S[w], c = s.hand[idx], e = other(w), [kind, n] = c.spell;
   if (w === 'p') S.played = true;
   s.mana -= c.cost; s.hand.splice(idx, 1);
-  if (kind === 'bolt') target === 'ward' ? hitWard(e, n) : hitCreature(target, n);
+  if (kind === 'bolt') { zapAt(target === 'ward' ? $(w === 'p' ? '#oward' : '#pward') : $(`[data-id="${target.id}"]`)); target === 'ward' ? hitWard(e, n) : hitCreature(target, n); }
   if (kind === 'heal') healWard(w, n);
   if (kind === 'nova') [...S[e].board].forEach(i => hitCreature(i, n));
-  S.sel = null; reapDead(); checkEnd(); setHint('Play cards, attack, then End Turn.'); render();
+  S.sel = null; reapDead(); checkEnd(); setHint('Play cards and attack - a turn passes by itself when nothing is left to do.'); render();
 }
 async function attack(w, att, target) {
   const was = S.busy; S.busy = true; S.sel = null;
@@ -198,6 +215,7 @@ function render() {
   $('#ometa').textContent = `Mana ${o.mana}/${o.max}, deck ${o.deck.length}, hand ${o.hand.length}`;
   $('#pmeta').textContent = `Mana ${p.mana}/${p.max}, deck ${p.deck.length}`;
   $('#pmana').innerHTML = Array.from({length: MAX_MANA}, (_, k) => `<i class="${k < p.mana ? 'on' : k < p.max ? 'used' : ''}"></i>`).join('');
+  $('#opips').innerHTML = Array.from({length: MAX_MANA}, (_, k) => `<i class="${k < o.mana ? 'on' : k < o.max ? 'used' : ''}"></i>`).join('');
   $('#turn').textContent = S.over ? 'Duel over' : S.turn === 'p' ? 'Your turn' : 'Enemy turn';
   $('#ohand').innerHTML = o.hand.map(() => '<div class="back"></div>').join('');
   $('#oboard').innerHTML = boardHtml('o', tg); $('#pboard').innerHTML = boardHtml('p', tg);
@@ -238,6 +256,15 @@ function playerBoltTarget(n) {
   const guard = cs.find(t => t.c.guard); if (guard) return guard;
   return cs.sort((a, b) => b.c.cost - a.c.cost)[0] || 'ward';
 }
+function maybeAutoPass() {               // nothing playable and nothing ready to attack: the turn passes by itself
+  if (!S || S.over || S.turn !== 'p' || S.busy) return;
+  const p = S.p;
+  const canPlay = p.hand.some(c => c.cost <= p.mana && (c.spell || p.board.length < MAX_BOARD));
+  const canAttack = p.board.some(i => i.ready);
+  if (canPlay || canAttack) return;
+  setHint('Nothing left to do - your turn passes by itself.');
+  setTimeout(() => { if (S && !S.over && S.turn === 'p' && !S.busy) endTurn(); }, 900);
+}
 // ---------- Input ----------
 async function onBoardClick(e) {
   if (S.turn !== 'p' || S.busy || S.over) return;
@@ -247,15 +274,15 @@ async function onBoardClick(e) {
   if (t.dataset.hand !== undefined) {          // one click plays the card
     const idx = +t.dataset.hand, c = p.hand[idx];
     if (c.cost > p.mana) return setHint('Not enough mana.');
-    if (c.spell) { if (c.spell[0] === 'bolt') return castSpell('p', idx, playerBoltTarget(c.spell[1])); return castSpell('p', idx); }
+    if (c.spell) { const r = c.spell[0] === 'bolt' ? castSpell('p', idx, playerBoltTarget(c.spell[1])) : castSpell('p', idx); maybeAutoPass(); return r; }
     if (p.board.length >= MAX_BOARD) return setHint('Your board is full.');
-    return playCreature('p', idx);
+    const r = playCreature('p', idx); maybeAutoPass(); return r;
   }
   if (t.dataset.side === 'p') {                // one click attacks: Guard, a killable creature, or the Ward
     const inst = p.board.find(i => i.id == t.dataset.id);
     if (!inst) return;
     if (!inst.ready) return setHint('That creature just arrived and cannot attack yet.');
-    return await attack('p', inst, playerAutoTarget(inst));
+    const r = await attack('p', inst, playerAutoTarget(inst)); maybeAutoPass(); return r;
   }
   return setHint('Tap your cards to play them; tap your creatures to attack.');
 }
@@ -267,3 +294,33 @@ $('#end').onclick = endTurn;
 $('#restart').onclick = $('#again').onclick = newGame;
 $('#start').onclick = () => { $('#title').classList.add('hidden'); $('#game').classList.remove('hidden'); newGame(); };
 showTitle();
+
+// ---------- Lobby: card gallery + rules ----------
+const DESC = {
+  cinderkit: 'Fast, cheap attacker. Only 1 HP, so it falls quickly - pure early pressure.',
+  mossback: 'Guard wall. Enemies must attack Mossback first, so it soaks up hits while your other creatures attack freely.',
+  nixie: 'Healer on arrival: the moment it is summoned, your Ward regains 2 HP.',
+  stormfang: 'Swift: it can attack on the very turn it is summoned - no waiting.',
+  witch: 'On arrival: draw 1 extra card from your deck.',
+  paladin: 'Guard knight. Enemies must chew through her 5 HP before they can touch anything else you control.',
+  roc: 'On arrival: deals 1 damage straight to the enemy Ward, then fights as a 4/3.',
+  drake: 'On arrival: deals 2 damage straight to the enemy Ward, then fights as a 5/4 dragon.',
+  serpent: 'Pure muscle: 4 attack and 6 HP, no tricks. Very hard to remove.',
+  phoenix: 'On arrival: heals your Ward by 4, then fights as a 5/5.',
+  colossus: 'The biggest Guard in the game: 7/7, and enemies must destroy it before anything else.',
+  spark: 'Lightning spell: 2 damage to one enemy creature or the enemy Ward. A cheap finisher - the target is struck by lightning.',
+  fireball: 'Heavy spell: 5 damage to one enemy creature or the enemy Ward. Kills almost anything in one hit.',
+  mend: 'Healing spell: your Ward regains 5 HP.',
+  nova: 'Board-clear spell: 3 damage to EVERY enemy creature at the same time.'
+};
+function buildGallery() {
+  $('#galleryGrid').innerHTML = CARDS.map(c => {
+    const stats = c.spell ? `Spell - costs ${c.cost} mana` : `Creature - costs ${c.cost} mana - ${c.atk} ATK / ${c.hp} HP${c.guard ? ' - Guard' : ''}${c.charge ? ' - Swift' : ''}`;
+    return `<div class="g-item">${cardHtml(c, {})}<div class="g-info"><b>${c.name}</b><div class="g-stats">${stats}</div><p>${DESC[c.id] || c.text}</p></div></div>`;
+  }).join('');
+}
+$('#galleryBtn').onclick = () => { buildGallery(); $('#gallery').hidden = false; };
+$('#galleryClose').onclick = () => { $('#gallery').hidden = true; };
+$('#rulesBtn').onclick = () => { $('#rules').hidden = false; };
+$('#rulesClose').onclick = () => { $('#rules').hidden = true; };
+$('#lobby').onclick = () => location.reload();

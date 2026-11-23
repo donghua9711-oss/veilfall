@@ -173,3 +173,24 @@ main{background:
   .card .nm{font-size:.9em}
   #phand .card .nm{font-size:.9em}
 }
+
+/* ---------- lobby overlays: gallery + rules ---------- */
+#gallery,#rules{position:fixed;inset:0;z-index:40;background:rgba(5,8,16,.9);overflow-y:auto;padding:18px 12px 30px}
+.g-panel{max-width:860px;margin:0 auto}
+.g-head{display:flex;justify-content:space-between;align-items:center}
+.g-head h2{margin:0;letter-spacing:.14em}
+.g-sub{color:#aebadd;margin:4px 0 14px}
+#galleryGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.g-item{display:flex;gap:12px;background:#141d2e;border:1px solid #2b3a57;border-radius:14px;padding:10px;align-items:flex-start}
+.g-item .card{--cw:86px;flex:none}
+.g-info b{display:block;font-size:14px}
+.g-info .g-stats{color:#8fd0ff;font-size:12px;font-weight:700;margin:2px 0 4px}
+.g-info p{margin:0;font-size:12.5px;line-height:1.45;color:#c6cde0}
+.r-list{margin:10px 0 0;padding-left:20px;line-height:1.55;color:#dbe2f2;font-size:14.5px}
+.r-list li{margin-bottom:9px}
+/* ---------- lightning strike ---------- */
+.zap{position:fixed;inset:0;width:100%;height:100%;z-index:35;pointer-events:none;filter:drop-shadow(0 0 6px #ffe95a)}
+.flash{position:fixed;z-index:34;background:#fff8d0;border-radius:10px;pointer-events:none;animation:flashA .28s ease-out forwards}
+@keyframes flashA{from{opacity:.85}to{opacity:0}}
+.shake{animation:shakeA .3s ease-in-out}
+@keyframes shakeA{20%{transform:translateX(-4px) rotate(-1.5deg)}45%{transform:translateX(4px)}70%{transform:translateX(-3px) rotate(1deg)}}
