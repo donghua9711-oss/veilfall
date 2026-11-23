@@ -114,3 +114,62 @@ main{background:
 @keyframes dieA{35%{transform:scale(1.13) rotate(-2deg);filter:brightness(2.2)}100%{transform:scale(.55) rotate(3deg);opacity:0;filter:brightness(3.5) blur(2px)}}
 .ring{position:fixed;border:3px solid rgba(255,190,90,.85);border-radius:50%;z-index:28;pointer-events:none;animation:ringA .45s ease-out forwards}
 @keyframes ringA{from{transform:scale(.25);opacity:1}to{transform:scale(1.5);opacity:0}}
+
+/* ---------- compact cards on small screens: nothing spills out ---------- */
+@media (max-width: 820px) {
+  :root{--bw:15.6vw;--hw:16.8vw}
+  main{padding:6px}
+  .row{gap:4px}
+  .card{padding:3px;border-radius:8px;min-width:0;flex:1 1 0}
+  #oboard .card,#pboard .card{max-width:var(--bw)}
+  #phand .card{max-width:var(--hw)}
+  .card .top{gap:2px}
+  .cost{width:15px;height:15px;font-size:9px}
+  .nm{font-size:8.5px;overflow:hidden;text-overflow:ellipsis}
+  .art{border-radius:5px;margin:2px 0}
+  .tx{font-size:7px;line-height:1.15;min-height:16px}
+  .stats{gap:2px;margin-top:1px}
+  .stats .n{width:15px;height:15px;font-size:9px}
+  .stats .lb{font-size:7px}
+  .kind{font-size:6px;letter-spacing:.02em}
+  aside .ward b{font-size:26px}
+  #hint{font-size:10.5px}
+}
+
+/* small screens: cost gem rides the corner so the name gets the full width */
+@media (max-width: 820px) {
+  .card .top{position:relative}
+  .card .cost{position:absolute;left:-3px;top:-3px;box-shadow:0 1px 5px #000a}
+  .card .nm{font-size:8px;padding-left:11px}
+}
+
+/* small screens, final: hand becomes a scrollable tray of full readable cards;
+   the corner gem applies to hand cards only */
+@media (max-width: 820px) {
+  #phand{overflow-x:auto;overflow-y:hidden;justify-content:flex-start;padding:2px 2px 6px;scrollbar-width:none}
+  #phand::-webkit-scrollbar{display:none}
+  #phand .card{flex:0 0 72px;max-width:72px}
+  #phand .card .top{position:relative}
+  #phand .card .cost{position:absolute;left:-3px;top:-3px;box-shadow:0 1px 5px #000a}
+  #phand .card .nm{font-size:9px;padding-left:11px}
+  #phand .card .tx{font-size:7.5px}
+  .card .nm{padding-left:0}
+  .card .cost{position:static;box-shadow:none}
+  #pboard .card .nm,#oboard .card .nm{padding-left:0}
+}
+
+/* small screens: drop the decorative element gem from the name row (the element
+   is already named in the kind line) so names get the full width */
+@media (max-width: 820px) {
+  .card .top > span:last-child{display:none}
+  #phand .card .nm{font-size:8.5px}
+}
+
+/* small screens, final word: scale card text with the card's own em system
+   (the 9px floor was what broke the fit), slightly wider board cards */
+@media (max-width: 820px) {
+  :root{--bw:16.8vw}
+  .card{font-size:calc(var(--w)*.104)}
+  .card .nm{font-size:.9em}
+  #phand .card .nm{font-size:.9em}
+}
