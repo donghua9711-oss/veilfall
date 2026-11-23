@@ -202,3 +202,6 @@ main{background:
   .stats .lb{font-size:.78em}
   .cost{width:1.9em;height:1.9em;font-size:.95em}
 }
+
+#log{font-size:11px;color:#8fa3c8;line-height:1.5;min-height:32px;text-align:center}
+#log .last{color:#e6ecf9;font-weight:700}

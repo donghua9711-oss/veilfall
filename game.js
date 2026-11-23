@@ -64,6 +64,8 @@ function explodeAt(el) {
     document.body.append(p); setTimeout(() => p.remove(), 580);
   }
 }
+const LOG = [];
+function logEvent(t) { LOG.push(t); if (LOG.length > 3) LOG.shift(); const el = $('#log'); if (el) el.innerHTML = LOG.map((x, i) => `<div class="${i === LOG.length - 1 ? 'last' : ''}">${x}</div>`).join(''); }
 function zapAt(el) {                 // a lightning bolt strikes the target card or Ward
   if (!el) return;
   const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
@@ -95,12 +97,13 @@ function battlecry(w, [kind, n]) {
 }
 function playCreature(w, idx) {
   const s = S[w], c = s.hand[idx]; s.mana -= c.cost; s.hand.splice(idx, 1);
-  s.board.push(makeCreature(c)); if (w === 'p') S.played = true; if (c.bc) battlecry(w, c.bc);
+  s.board.push(makeCreature(c)); if (w === 'p') S.played = true; logEvent((w === 'p' ? 'You summoned ' : 'Warden summoned ') + c.name + '.'); if (c.bc) battlecry(w, c.bc);
   checkEnd(); render();
 }
 function castSpell(w, idx, target) {
   const s = S[w], c = s.hand[idx], e = other(w), [kind, n] = c.spell;
   if (w === 'p') S.played = true;
+  logEvent((w === 'p' ? 'You cast ' : 'Warden cast ') + c.name + '.');
   s.mana -= c.cost; s.hand.splice(idx, 1);
   if (kind === 'bolt') { zapAt(target === 'ward' ? $(w === 'p' ? '#oward' : '#pward') : $(`[data-id="${target.id}"]`)); target === 'ward' ? hitWard(e, n) : hitCreature(target, n); }
   if (kind === 'heal') healWard(w, n);
@@ -114,7 +117,7 @@ async function attack(w, att, target) {
   att.ready = false;
   if (target === 'ward') hitWard(other(w), att.atk);
   else { hitCreature(target, att.atk); hitCreature(att, target.atk); }
-  S.busy = was; reapDead(); checkEnd(); render();
+  S.busy = was; logEvent(att.c.name + ' attacked ' + (target === 'ward' ? (w === 'p' ? 'the enemy Ward' : 'your Ward') : target.c.name) + '.'); reapDead(); checkEnd(); render();
 }
 function checkEnd() {
   if (S.over) return;
