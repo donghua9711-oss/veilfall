@@ -1,7 +1,7 @@
 // Veilfall: 1v1 duel vs AI. Reduce the enemy Ward from 20 to 0.
 const $ = s => document.querySelector(s), sleep = ms => new Promise(r => setTimeout(r, ms));
 const MAX_WARD = 20, MAX_BOARD = 5, MAX_HAND = 7, MAX_MANA = 10;
-const TURN_SECONDS = 30, TIMEOUT_BURN = 2;
+const TURN_SECONDS = 15, TIMEOUT_BURN = 2;
 let S, uid = 0;
 const other = w => w === 'p' ? 'o' : 'p';
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -122,13 +122,28 @@ function aiPickTarget(a) {
   const t = cs.sort((x, y) => x.hp - y.hp)[0];
   return t && (a.atk >= t.hp || a.hp > t.atk) ? t : null;
 }
+function aiForcePlay() {               // the Warden must act: cheapest affordable card, played plainly
+  const o = S.o, p = S.p;
+  const idxs = o.hand.map((c, i) => i).filter(i => o.hand[i].cost <= o.mana).sort((a, b) => o.hand[a].cost - o.hand[b].cost);
+  for (const i of idxs) {
+    const c = o.hand[i];
+    if (!c.spell) { if (o.board.length < MAX_BOARD) { playCreature('o', i); return true; } continue; }
+    const [k, n] = c.spell;
+    if (k === 'bolt') { const t = [...p.board].sort((a, b) => b.c.cost - a.c.cost)[0]; castSpell('o', i, t || 'ward'); return true; }
+    if (k === 'nova' && p.board.length) { castSpell('o', i); return true; }
+    if (k === 'heal' && o.ward <= MAX_WARD - n) { castSpell('o', i); return true; }
+  }
+  return false;
+}
 async function aiTurn() {
-  S.busy = true; render(); await sleep(800);
-  for (let n = 0; n < 8 && !S.over; n++) { const act = aiPickPlay(); if (!act) break; act(); await sleep(750); }
+  S.busy = true; render(); await sleep(450);
+  const handBefore = S.o.hand.length, boardBefore = S.o.board.length;
+  for (let n = 0; n < 8 && !S.over; n++) { const act = aiPickPlay(); if (!act) break; act(); await sleep(450); }
+  if (!S.over && S.o.hand.length === handBefore && S.o.board.length === boardBefore) { if (aiForcePlay()) await sleep(450); }
   for (const a of [...S.o.board]) {
     if (S.over) break; if (!a.ready || a.hp <= 0) continue;
     const t = aiPickTarget(a); if (!t) continue;
-    await attack('o', a, t); await sleep(550);
+    await attack('o', a, t); await sleep(320);
   }
   S.busy = false; if (!S.over) startTurn('p'); else render();
 }
