@@ -6,7 +6,7 @@ let S, uid = 0;
 const other = w => w === 'p' ? 'o' : 'p';
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const newSide = () => ({ward: MAX_WARD, mana: 0, max: 0, deck: shuffle([...CARDS, ...CARDS]), hand: [], board: []});
-const makeCreature = c => ({c, id: ++uid, atk: c.atk, hp: c.hp, max: c.hp, ready: !!c.charge});
+const makeCreature = c => ({c, id: ++uid, atk: c.atk, hp: c.hp, max: c.hp, ready: true});
 
 function newGame() {
   S = {p: newSide(), o: newSide(), turn: 'p', busy: false, sel: null, over: false};
@@ -305,7 +305,7 @@ const DESC = {
   cinderkit: 'Fast, cheap attacker. Only 1 HP, so it falls quickly - pure early pressure.',
   mossback: 'Guard wall. Enemies must attack Mossback first, so it soaks up hits while your other creatures attack freely.',
   nixie: 'Healer on arrival: the moment it is summoned, your Ward regains 2 HP.',
-  stormfang: 'Swift: it can attack on the very turn it is summoned - no waiting.',
+  stormfang: 'On arrival: deals 1 damage straight to the enemy Ward - and like every creature, it attacks at the end of the turn it is summoned.',
   witch: 'On arrival: draw 1 extra card from your deck.',
   paladin: 'Guard knight. Enemies must chew through her 5 HP before they can touch anything else you control.',
   roc: 'On arrival: deals 1 damage straight to the enemy Ward, then fights as a 4/3.',

@@ -4,7 +4,7 @@ const CARDS = [
   {id:'cinderkit', name:'Cinderkit', el:'fire', kind:'sprite', cost:1, atk:2, hp:1, text:'Tiny, hungry, always warm.'},
   {id:'mossback', name:'Mossback', el:'grove', kind:'golem', cost:2, atk:1, hp:4, guard:1, text:'Guard. Moss grows where it stands.'},
   {id:'nixie', name:'Tide Nixie', el:'tide', kind:'mage', cost:2, atk:2, hp:2, bc:['heal',2], text:'Heal your Ward 2 on arrival.'},
-  {id:'stormfang', name:'Stormfang', el:'storm', kind:'wolf', cost:3, atk:3, hp:2, charge:1, text:'Swift. Attacks right away.'},
+  {id:'stormfang', name:'Stormfang', el:'storm', kind:'wolf', cost:3, atk:3, hp:2, bc:['hit',1], text:'Deal 1 to the enemy Ward on arrival.'},
   {id:'witch', name:'Gloom Witch', el:'void', kind:'mage', cost:3, atk:2, hp:3, bc:['draw',1], text:'Draw a card on arrival.'},
   {id:'paladin', name:'Dawn Paladin', el:'light', kind:'knight', cost:4, atk:3, hp:5, guard:1, text:'Guard. Her shield never dims.'},
   {id:'roc', name:'Thunder Roc', el:'storm', kind:'bird', cost:4, atk:4, hp:3, bc:['hit',1], text:'Deal 1 to the enemy Ward.'},
