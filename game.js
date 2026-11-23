@@ -1,6 +1,7 @@
 // Veilfall: 1v1 duel vs AI. Reduce the enemy Ward from 20 to 0.
 const $ = s => document.querySelector(s), sleep = ms => new Promise(r => setTimeout(r, ms));
 const MAX_WARD = 20, MAX_BOARD = 5, MAX_HAND = 7, MAX_MANA = 10;
+const TURN_SECONDS = 30, TIMEOUT_BURN = 2;
 let S, uid = 0;
 const other = w => w === 'p' ? 'o' : 'p';
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -28,6 +29,7 @@ function drawCard(w) {
 }
 function startTurn(w) {
   const s = S[w]; S.turn = w; s.max = Math.min(MAX_MANA, s.max + 1); s.mana = s.max;
+  if (w === 'p') { S.played = false; S.deadline = Date.now() + TURN_SECONDS * 1000; }
   drawCard(w); s.board.forEach(i => i.ready = true); S.sel = null;
   setHint(w === 'p' ? 'Play cards, attack, then End Turn.' : 'The Rift Warden is plotting...');
   checkEnd(); render();
@@ -55,11 +57,12 @@ function battlecry(w, [kind, n]) {
 }
 function playCreature(w, idx) {
   const s = S[w], c = s.hand[idx]; s.mana -= c.cost; s.hand.splice(idx, 1);
-  s.board.push(makeCreature(c)); if (c.bc) battlecry(w, c.bc);
+  s.board.push(makeCreature(c)); if (w === 'p') S.played = true; if (c.bc) battlecry(w, c.bc);
   checkEnd(); render();
 }
 function castSpell(w, idx, target) {
   const s = S[w], c = s.hand[idx], e = other(w), [kind, n] = c.spell;
+  if (w === 'p') S.played = true;
   s.mana -= c.cost; s.hand.splice(idx, 1);
   if (kind === 'bolt') target === 'ward' ? hitWard(e, n) : hitCreature(target, n);
   if (kind === 'heal') healWard(w, n);
@@ -165,6 +168,23 @@ function render() {
   $('#phand').innerHTML = p.hand.map((c, i) => cardHtml(c, {cls: S.turn === 'p' && !S.busy && c.cost <= p.mana ? 'ok' : '', attrs: `data-hand="${i}"`})).join('');
   $('#end').disabled = S.turn !== 'p' || S.busy || S.over;
 }
+
+// ---------- Turn timer ----------
+function tickTimer() {
+  const bar = $('#timer'); if (!bar || !S) return;
+  if (S.over || S.turn !== 'p') { bar.className = ''; return; }
+  const left = Math.max(0, S.deadline - Date.now()), secs = Math.ceil(left / 1000);
+  bar.className = 'on' + (secs <= 10 ? ' low' : '');
+  bar.querySelector('i').style.width = (left / (TURN_SECONDS * 1000) * 100) + '%';
+  bar.querySelector('span').textContent = secs + 's to summon';
+  if (left > 0 || S.busy) return;
+  S.busy = true;                                     // summoning is closed
+  if (!S.played) { hitWard('p', TIMEOUT_BURN); setHint('Time! You summoned nothing - the Rift burns your Ward for ' + TIMEOUT_BURN + '.'); }
+  else setHint('Time! Your turn passes.');
+  render();
+  setTimeout(() => { S.busy = false; if (!S.over) startTurn('o'); }, 1300);
+}
+setInterval(tickTimer, 250);
 
 // ---------- Input ----------
 async function onBoardClick(e) {

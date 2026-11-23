@@ -89,3 +89,9 @@ main{display:flex;flex-direction:column;justify-content:space-between;padding:8p
 }
 
 #phand .card:not(.ok){opacity:.55}
+
+#timer{position:relative;height:16px;border-radius:8px;background:#0007;overflow:hidden;display:none}
+#timer.on{display:block}
+#timer i{position:absolute;inset:0;width:100%;background:linear-gradient(90deg,#57c8f5,#8a5cff);transition:width .25s linear}
+#timer.low i{background:linear-gradient(90deg,#ff5a6a,#ff9a6a)}
+#timer span{position:absolute;inset:0;display:grid;place-items:center;font-size:10.5px;font-weight:800;letter-spacing:.12em;color:#fff;text-shadow:0 1px 3px #000}
